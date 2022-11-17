@@ -3,7 +3,7 @@ scgi_temp/
 proxy_temp/
 logs/
 fastcgi_temp/
-clint_body_temp/
+client_body_temp/
 cmake-build*/
 
 .idea/
@@ -11,5 +11,5 @@ cmake-build*/
 *.tar.gz
 *.zip
 nginx-*/
-uv_mbed*/
+uv-mbed*/
 ziti-sdk-*/

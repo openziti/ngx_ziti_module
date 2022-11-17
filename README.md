@@ -31,13 +31,15 @@ tar -xzvf uv_mbed-0.14.11.tar.gz
 
 cd nginx-1.23.2/
 
-# Here we assume you would install you nginx under /opt/nginx/.
-cd nginx-1.23.2/; ./configure         /
-      --prefix=/opt/nginx             /
-      --add-module=../                / 
-      --with-threads                  / 
-      --with-ld-opt=../ziti-sdk-0.30.8-Linux-x86_64/lib/libziti.so / 
-      --with-cc-opt="-I ../include -I ../uv-mbed-0.14.11/include"
+# Here we assume you would install you nginx under: /opt/nginx
+cd nginx-1.23.2/
+./configure        \
+    --prefix="/opt/nginx"     \
+    --add-module="../" \
+    --with-threads     \
+    --with-compat      \
+    --with-ld-opt=../ziti-sdk-0.30.8-Linux-x86_64/lib/libziti.so \
+    --with-cc-opt="-I ../include -I ../uv-mbed-0.14.11/include"
 make
 make install
 ```
