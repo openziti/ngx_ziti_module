@@ -7,3 +7,9 @@ clint_body_temp/
 cmake-build*/
 
 .idea/
+
+*.tar.gz
+*.zip
+nginx-*/
+uv_mbed*/
+ziti-sdk-*/
