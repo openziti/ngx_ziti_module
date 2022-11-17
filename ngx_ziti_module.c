@@ -190,11 +190,11 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
             ssize_t read_size = read(client_ctx->client_socket, read_buff, sizeof(read_buff));
 
             if(read_size > 0){
-                printf("--writing to upstream\n");
+                ngx_log_error(NGX_LOG_DEBUG, log, 0, "writing to upstream");
                 ssize_t written = write(upstream_socket, read_buff, read_size);
-                printf("--wrote %zd\n", written);
+                ngx_log_error(NGX_LOG_DEBUG, log, 0,"wrote %zd", written);
             } else {
-                printf("closing, client disconnected\n");
+                ngx_log_error(NGX_LOG_DEBUG, log, 0,"closing, client disconnected");
                 break;
             }
 
@@ -205,11 +205,11 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
             ssize_t read_size = read(upstream_socket, read_buff, sizeof(read_buff));
 
             if(read_size > 0) {
-                printf("--writing to client\n");
+                ngx_log_error(NGX_LOG_DEBUG, log, 0,"writing to client");
                 ssize_t written = write(client_ctx->client_socket, read_buff, read_size);
-                printf("--wrote %zd\n", written);
+                ngx_log_error(NGX_LOG_DEBUG, log, 0,"--wrote %zd", written);
             } else {
-                printf("closing, upstream disconnected\n");
+                ngx_log_error(NGX_LOG_DEBUG, log, 0,"closing, upstream disconnected");
                 break;
             }
             continue;
@@ -217,13 +217,13 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
     } while(1);
 
 
-    printf("service client thread exited\n");
+    ngx_log_error(NGX_LOG_DEBUG, log, 0, "service client thread exited");
 
 
     ssize_t read_size = read(upstream_socket, read_buff, sizeof(read_buff));
 
     if(read_size > 0) {
-        printf("--writing to client: %s\n", read_buff);
+        ngx_log_error(NGX_LOG_DEBUG, log, 0, "--writing to client: %s", read_buff);
     }
 
     close(upstream_socket);
@@ -366,20 +366,20 @@ static ngx_command_t ngx_ziti_commands[] = {
          0, /* No offset when storing the module configuration on struct. */
          NULL},
 
-        {ngx_string("ziti_identity_file"),
+        {ngx_string("identity_file"),
          NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
          ngx_ziti_identity_file,
          0,
          0,
          NULL},
-        { ngx_string("ziti_bind"),
+        { ngx_string("bind"),
           NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1,
           ngx_ziti_bind,
           0,
           0,
           NULL
         },
-        { ngx_string("ziti_upstream"),
+        { ngx_string("upstream"),
           NGX_ZITI_BIND_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
           ngx_ziti_bind_upstream,
           0,

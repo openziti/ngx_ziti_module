@@ -47,10 +47,10 @@ events {
 }
 
 ziti myZitiInstaceNameUsedForLogging {
-    ziti_identity_file /path/to/ziti/identity.json;
+    identity_file /path/to/ziti/identity.json;
 
-    ziti_bind http-service {
-        ziti_upstream localhost:7070;
+    bind http-service {
+        upstream localhost:7070;
     }
 }
 ```
