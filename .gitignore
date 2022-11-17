@@ -1,0 +1,9 @@
+uwsgi_temp/
+scgi_temp/
+proxy_temp/
+logs/
+fastcgi_temp/
+clint_body_temp/
+cmake-build*/
+
+.idea/

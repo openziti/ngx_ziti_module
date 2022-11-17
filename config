@@ -1,0 +1,12 @@
+ngx_addon_name=ngx_ziti_module
+
+if test -n "$ngx_module_link"; then
+    ngx_module_type=CORE
+    ngx_module_name=ngx_ziti_module
+    ngx_module_srcs="$ngx_addon_dir/ngx_ziti_module.c"
+
+    . auto/module
+else
+    CORE_MODULES="$CORE_MODULES ngx_ziti_module"
+    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_ziti_module.c"
+fi
