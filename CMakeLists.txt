@@ -10,4 +10,6 @@ find_package(Git REQUIRED)
 add_library(${PROJECT_NAME} SHARED ngx_ziti_module.c)
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
+add_compile_definitions(IS_CMAKE=1)
+
 add_subdirectory("deps")

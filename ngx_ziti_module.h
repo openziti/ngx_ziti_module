@@ -17,6 +17,23 @@ extern ngx_module_t ngx_ziti_module;
 #define NGX_ZITI_CONF 0x80000001
 #define NGX_ZITI_BIND_CONF 0x80000002
 
+static char *ngx_ziti(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_ziti_identity_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char* ngx_ziti_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char* ngx_ziti_bind_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle);
+static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf);
+
+
+/*
+ * Defines nginx module context
+ */
+static ngx_core_module_t ngx_ziti_module_ctx = {
+        .name = ngx_string("ngx_ziti_module"),
+        ngx_ziti_create_main_conf, /* pre-configuration */
+        ngx_ziti_init_main_conf, /* post-configuration */
+};
+
 typedef struct {
     ngx_str_t name;
 
@@ -40,12 +57,20 @@ typedef struct {
     ngx_ziti_block_conf_t* cur_block;
 } ngx_ziti_conf_t;
 
-static ngx_int_t ngx_ziti_init(ngx_cycle_t *cycle);
-static char *ngx_ziti(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char *ngx_ziti_identity_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char* ngx_ziti_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char* ngx_ziti_bind_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle);
-static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf);
+
+
+typedef struct {
+    ngx_ziti_block_conf_t* block;
+    ngx_str_t service;
+    ngx_str_t upstream;
+    ngx_cycle_t *cycle;
+} ngx_ziti_service_ctx_t;
+
+typedef struct {
+    ziti_socket_t client_socket;
+    ngx_str_t upstream;
+    char client_name[128];
+} ngx_ziti_service_client_ctx_t;
+
 
 #endif //NGX_ZITI_MODULE_H

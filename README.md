@@ -16,14 +16,28 @@ the following arguments are useful if the repository is your working directory`-
 To use nginx's build system:
 
 ```shell
+sudo apt install libuv1-dev
+
 wget 'http://nginx.org/download/nginx-1.23.2.tar.gz'
 tar -xzvf nginx-1.23.2.tar.gz
+
+# See https://github.com/openziti/ziti-sdk-c/releases for other platforms
+wget 'https://github.com/openziti/ziti-sdk-c/releases/download/0.30.8/ziti-sdk-0.30.8-Linux-x86_64.zip'
+unzip ziti-sdk-0.30.8-Linux-x86_64.zip -d ziti-sdk-0.30.8-Linux-x86_64 
+
+wget "https://github.com/openziti/uv-mbed/archive/refs/tags/v0.14.11.tar.gz"
+mv v0.14.11.tar.gz uv_mbed-0.14.11.tar.gz
+tar -xzvf uv_mbed-0.14.11.tar.gz
+
 cd nginx-1.23.2/
 
 # Here we assume you would install you nginx under /opt/nginx/.
-./configure --prefix=/opt/nginx \
-  --add-module=/path/to/ngx_ziti_module \
-  --with-threads
+cd nginx-1.23.2/; ./configure         /
+      --prefix=/opt/nginx             /
+      --add-module=../                / 
+      --with-threads                  / 
+      --with-ld-opt=../ziti-sdk-0.30.8-Linux-x86_64/lib/libziti.so / 
+      --with-cc-opt="-I ../include -I ../uv-mbed-0.14.11/include"
 make
 make install
 ```

@@ -10,39 +10,7 @@
 #define ngx_ziti_warn(log, ...) ngx_log_error(NGX_LOG_WARN, log, 0, __VA_ARGS__)
 #define ngx_ziti_info(log, ...) ngx_log_error(NGX_LOG_INFO, log, 0, __VA_ARGS__)
 
-
 static ngx_str_t ngx_ziti_thread_pool_name = ngx_string("ngx_ziti_tp");
-
-#ifndef ngx_modules
-/*
- * nginx required symbols, unused in this project. The standard nginx build tools add this section of code
- * automatically. If already defined, do not redefine.
- */
-ngx_module_t *ngx_modules[] = {
-        &ngx_ziti_module,
-        NULL
-};
-
-char *ngx_module_names[] = {
-        "ngx_ziti_module",
-        NULL
-};
-
-char *ngx_module_order[] = {
-        NULL
-};
-#endif //ngx_modules
-
-
-/*
- * Defines nginx module context
- */
-static ngx_core_module_t ngx_ziti_module_ctx = {
-        .name = ngx_string("ngx_ziti_module"),
-        ngx_ziti_create_main_conf, /* preconfiguration */
-        ngx_ziti_init_main_conf, /* postconfiguration */
-};
-
 
 static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle) {
     ngx_ziti_conf_t* ziti_conf = ngx_palloc(cycle->pool, sizeof(ngx_ziti_conf_t));
@@ -80,19 +48,6 @@ static ngx_ziti_block_conf_t * ngx_ziti_new_block(ngx_conf_t *cf, ngx_str_t bloc
 
     return ziti_block;
 }
-
-typedef struct {
-    ngx_ziti_block_conf_t* block;
-    ngx_str_t service;
-    ngx_str_t upstream;
-    ngx_cycle_t *cycle;
-} ngx_ziti_service_ctx_t;
-
-typedef struct {
-    ziti_socket_t client_socket;
-    ngx_str_t upstream;
-    char client_name[128];
-} ngx_ziti_service_client_ctx_t;
 
 static int hostname_to_ip(char * hostname , char* ip){
     struct hostent *he;
@@ -593,4 +548,24 @@ static char* ngx_ziti_bind_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *co
     return NGX_CONF_OK;
 }
 
+#ifdef IS_CMAKE
+/*
+ * nginx required symbols, unused by this project, but required by nginx.
+ * The standard nginx build tools add this section of code automatically during `./configure ....`.
+ * This is only used for standalone CMake builds.
+ */
+ngx_module_t *ngx_modules[] = {
+        &ngx_ziti_module,
+        NULL
+};
 
+char *ngx_module_names[] = {
+        "ngx_ziti_module",
+        NULL
+};
+
+char *ngx_module_order[] = {
+        NULL
+};
+
+#endif //IS_CMAKE
