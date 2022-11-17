@@ -5,10 +5,18 @@
 #error ngx_ziti_module.c requires --with-threads
 #endif /* NGX_THREADS */
 
+#define ngx_ziti_debug(log, ...) ngx_log_error(NGX_LOG_DEBUG, log, 0, __VA_ARGS__)
+#define ngx_ziti_emerg(log, ...) ngx_log_error(NGX_LOG_EMERG, log, 0, __VA_ARGS__)
+#define ngx_ziti_warn(log, ...) ngx_log_error(NGX_LOG_WARN, log, 0, __VA_ARGS__)
+#define ngx_ziti_info(log, ...) ngx_log_error(NGX_LOG_INFO, log, 0, __VA_ARGS__)
+
+
 static ngx_str_t ngx_ziti_thread_pool_name = ngx_string("ngx_ziti_tp");
 
+#ifndef ngx_modules
 /*
- * nginx required symbols, unused in this project
+ * nginx required symbols, unused in this project. The standard nginx build tools add this section of code
+ * automatically. If already defined, do not redefine.
  */
 ngx_module_t *ngx_modules[] = {
         &ngx_ziti_module,
@@ -23,6 +31,8 @@ char *ngx_module_names[] = {
 char *ngx_module_order[] = {
         NULL
 };
+#endif //ngx_modules
+
 
 /*
  * Defines nginx module context
@@ -122,12 +132,12 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
     char* port_str = strsep(&upstream, ":");
 
     if(hostname_str == NULL) {
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "upstream socket creation failed: hostname_str was null");
+        ngx_ziti_emerg(log, "upstream socket creation failed: hostname_str was null");
         return;
     }
 
     if(port_str == NULL) {
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "upstream socket creation failed: port was null");
+        ngx_ziti_emerg(log, "upstream socket creation failed: port was null");
         return;
     }
 
@@ -138,14 +148,14 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
     int port = atoi(port_str);
 
     if(port == 0 ){
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "upstream socket creation failed: port must be an integer (%s)", port_str);
+        ngx_ziti_emerg(log, "upstream socket creation failed: port must be an integer (%s)", port_str);
         return;
     }
 
     // socket create and verification
     upstream_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (upstream_socket <= 0) {
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "upstream socket creation failed");
+        ngx_ziti_emerg(log, "upstream socket creation failed");
         return;
     }
 
@@ -158,7 +168,7 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
 
     // connect the client_socket socket to server socket
     if (connect(upstream_socket, &upstream_addr_info, sizeof(upstream_addr_info)) != 0) {
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "connection with the upstream server failed");
+        ngx_ziti_emerg(log, "connection with the upstream server failed");
         return;
     }
 
@@ -181,7 +191,7 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
         activity = select(max_fd+1, &socket_fd_reads, NULL, NULL, NULL);
 
         if (activity < 0 && errno != EINTR) {
-            ngx_log_error(NGX_LOG_EMERG, log, 0, "select error(%d)", activity);
+            ngx_ziti_emerg(log, "select error(%d)", activity);
             break;
         }
 
@@ -190,11 +200,11 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
             ssize_t read_size = read(client_ctx->client_socket, read_buff, sizeof(read_buff));
 
             if(read_size > 0){
-                ngx_log_error(NGX_LOG_DEBUG, log, 0, "writing to upstream");
+                ngx_ziti_debug(log, "writing upstream", NULL);
                 ssize_t written = write(upstream_socket, read_buff, read_size);
-                ngx_log_error(NGX_LOG_DEBUG, log, 0,"wrote %zd", written);
+                ngx_ziti_debug(log,"wrote %zd", written);
             } else {
-                ngx_log_error(NGX_LOG_DEBUG, log, 0,"closing, client disconnected");
+                ngx_ziti_debug(log,"closing, client disconnected");
                 break;
             }
 
@@ -205,11 +215,11 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
             ssize_t read_size = read(upstream_socket, read_buff, sizeof(read_buff));
 
             if(read_size > 0) {
-                ngx_log_error(NGX_LOG_DEBUG, log, 0,"writing to client");
+                ngx_ziti_debug(log,"writing to client");
                 ssize_t written = write(client_ctx->client_socket, read_buff, read_size);
-                ngx_log_error(NGX_LOG_DEBUG, log, 0,"--wrote %zd", written);
+                ngx_ziti_debug(log,"--wrote %zd", written);
             } else {
-                ngx_log_error(NGX_LOG_DEBUG, log, 0,"closing, upstream disconnected");
+                ngx_ziti_debug(log,"closing, upstream disconnected");
                 break;
             }
             continue;
@@ -217,13 +227,13 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
     } while(1);
 
 
-    ngx_log_error(NGX_LOG_DEBUG, log, 0, "service client thread exited");
+    ngx_ziti_debug(log, "service client thread exited");
 
 
     ssize_t read_size = read(upstream_socket, read_buff, sizeof(read_buff));
 
     if(read_size > 0) {
-        ngx_log_error(NGX_LOG_DEBUG, log, 0, "--writing to client: %s", read_buff);
+        ngx_ziti_debug(log, "--writing to client: %s", read_buff);
     }
 
     close(upstream_socket);
@@ -250,21 +260,21 @@ static void ngx_ziti_run_service(void *data, ngx_log_t *log) {
     server_socket = Ziti_socket(SOCK_STREAM);
 
     if(server_socket <= 0) {
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s could not open server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, server_socket);
+        ngx_ziti_emerg(log, "for block %s service %s could not open server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, server_socket);
         return;
     }
 
     int err = Ziti_bind(server_socket, service_ctx->block->ztx, (char*)service_ctx->service.data, NULL);
 
     if(err != ZITI_OK){
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s could not bind server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, err);
+        ngx_ziti_emerg(log, "for block %s service %s could not bind server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, err);
         return;
     }
 
     err = Ziti_listen(server_socket, 64);
 
     if(err != ZITI_OK){
-        ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s could not listen on server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, err);
+        ngx_ziti_emerg(log, "for block %s service %s could not listen on server socket (%d), service thread exiting", service_ctx->block->name.data, service_ctx->service.data, err);
         return;
     }
 
@@ -272,7 +282,7 @@ static void ngx_ziti_run_service(void *data, ngx_log_t *log) {
          new_client = Ziti_accept(server_socket, new_client_name, sizeof(new_client_name));
 
          if(new_client <= 0){
-             ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s error returned from accept, exiting", service_ctx->block->name.data, service_ctx->service.data, server_socket);
+             ngx_ziti_emerg(log, "for block %s service %s error returned from accept, exiting", service_ctx->block->name.data, service_ctx->service.data, server_socket);
              break;
          }
 
@@ -280,7 +290,7 @@ static void ngx_ziti_run_service(void *data, ngx_log_t *log) {
         task = ngx_thread_task_alloc(service_ctx->cycle->pool, sizeof(ngx_ziti_service_client_ctx_t));
 
         if (task == NULL) {
-            ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s could not create new thread task", service_ctx->block->name.data, service_ctx->service.data);
+            ngx_ziti_emerg(log, "for block %s service %s could not create new thread task", service_ctx->block->name.data, service_ctx->service.data);
             Ziti_close(new_client);
             continue;
         }
@@ -295,7 +305,7 @@ static void ngx_ziti_run_service(void *data, ngx_log_t *log) {
         task->event.data = new_client_ctx;
 
         if (ngx_thread_task_post(tp, task) != NGX_OK) {
-            ngx_log_error(NGX_LOG_EMERG, log, 0, "for block %s service %s could not start new client thread task", service_ctx->block->name.data, service_ctx->service.data);
+            ngx_ziti_emerg(log, "for block %s service %s could not start new client thread task", service_ctx->block->name.data, service_ctx->service.data);
             Ziti_close(new_client);
             continue;
         }
@@ -344,7 +354,7 @@ ngx_int_t ngx_ziti_run_service_offload(ngx_cycle_t* cycle, ngx_ziti_service_ctx_
 static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf) {
     ngx_ziti_conf_t* ziti_conf = conf;
 
-    ngx_log_error(NGX_LOG_WARN, cycle->log, 0, "found %d ziti blocks", ziti_conf->blocks->nelts);
+    ngx_ziti_info(cycle->log, "found %d ziti blocks", ziti_conf->blocks->nelts);
 
     if(ziti_conf->blocks->nelts > 0){
         Ziti_lib_init();
@@ -396,7 +406,7 @@ static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
 
     for(ngx_uint_t i = 0; i < ziti_conf->blocks->nelts; i++) {
         ngx_ziti_block_conf_t* block = blocks[i];
-        ngx_log_error(NGX_LOG_WARN, cycle->log, 0, "initializing block %s", block->name.data);
+        ngx_ziti_warn(cycle->log, "initializing block %s", block->name.data);
         ngx_str_t         identity_file_full_path;
 
         identity_file_full_path = block->identity_file;
@@ -408,7 +418,8 @@ static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
         block->ztx = Ziti_load_context((char*)block->identity_file.data);
 
         if(block->ztx == NULL){
-            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "for block %s could not load identity file %s (resolved to %s)", block->name.data, block->identity_file.data, identity_file_full_path.data);
+            ngx_ziti_emerg(cycle->log, "for block %s could not load identity file %s (resolved to %s)", block->name.data, block->identity_file.data, identity_file_full_path.data);
+            return NGX_ERROR;
         }
 
         ngx_str_t* services = block->services->elts;
@@ -422,7 +433,7 @@ static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
                     .upstream = upstreams[y]
             };
 
-            ngx_log_error(NGX_LOG_WARN, cycle->log, 0, "offloading service start for block %s service %s", block->name.data, service.data);
+            ngx_ziti_info(cycle->log, "offloading service start for block %s service %s", block->name.data, service.data);
 
             ngx_int_t offload_result = ngx_ziti_run_service_offload(cycle, ziti_service_ctx);
 
