@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.16)
 project(ngx_ziti_module C)
 
 set(CMAKE_C_STANDARD 99)

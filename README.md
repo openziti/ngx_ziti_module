@@ -1,19 +1,18 @@
 # ngx_ziti_module
 
-This is an NGINX module that enables NGINX to `bind` OpenZiti servers and then forward incoming 
-connections to upstream addresses. To compile this module and to run it, NGINX must be compiled 
-with the `--with-threads` option to enable threading support. This is not available on Windows.
-You can verify if `nginx` was compiled with `--with-threads` via `nginx -V`.
+This is an NGINX module that enables NGINX to `bind` OpenZiti services and then forward incoming 
+connections to upstream addresses. To compile this module and to run it, Nginx must be compiled 
+with the `--with-threads` option. This is not available on Windows. You can verify if `nginx` 
+was compiled with `--with-threads` via `nginx -V`.
 
 # Building
 
-This module can be built in two fashions, it can be built via `nginx`'s build int auto configuration
-scripts or via CMake. The CMake build uses nginx's auto configuration builds but allow for better
-integration with moder IDE's like Clion. For CMake, point your toolchain at it. To run/debug/etc.
-the following arguments are useful if the repository is your working directory`-c configs/nginx.conf -e logs/err.log -p ./`.
+This module can be built in two fashions, it can be built via `nginx`'s built-in configuration
+scripts or via CMake. The CMake build uses nginx's configuration scripts under the hood and 
+allows for better integration with modern IDE's like Clion.
 
 
-To use nginx's build system:
+## Build Via Nginx
 
 ```shell
 sudo apt install libuv1-dev
@@ -44,6 +43,17 @@ make
 make install
 ```
 
+## Build using CMake
+
+```shell
+mkdir cmake-build
+cd cmake-build
+cmake ../
+make
+```
+
+This build will produce an `nginx` binary in `cmake-build-debug/_deps/nginx/src/nginx` and can be executed with 
+following arguments to run/debug this module: `nginx -c configs/nginx.conf -e logs/err.log -p ./`.
 
 # Using
 
@@ -62,11 +72,43 @@ events {
     worker_connections  1024;
 }
 
-ziti myZitiInstaceNameUsedForLogging {
-    identity_file /path/to/ziti/identity.json;
+ziti identity1 {
+    identity_file /path/to/ziti/identity1.json;
 
     bind http-service {
         upstream localhost:7070;
     }
 }
+
+ziti identity2 {
+    identity_file /path/to/ziti/identity2.json;
+
+    bind http-service {
+        upstream api.example.com:443;
+    }
+}
 ```
+
+## `ziti` blocks
+
+Multiple `ziti` blocks can be added to the root of your nginx configuration. Each block represents
+a single OpenZiti identity. Directly after the `ziti` statement a name can be given. This name is for
+organizational and logging purposes only.
+
+### `identity_file`
+
+Each `ziti` block must have exactly one `identity_file`. Different `ziti` blocks may use the same
+identity if desired. The value provided should be a path to an OpenZiti identity file that is
+stored in `json` format.
+
+### `bind` blocks
+
+Within each `ziti` block, multiple `bind` blocks are allowed. The value directly after the `bind`
+statement is the name of the OpenZiti service that the identity should attempt to bind. One must
+ensure that the identity of the containing `ziti` block has access to "bind" (host) the service
+via OpenZiti policies.
+
+#### `upstream`
+
+Each `bind` block may have at most one `upstream` value. This value must be a hostname and port
+combination in the format of `host:port` to the target back end hosting service.
