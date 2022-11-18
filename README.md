@@ -5,6 +5,9 @@ connections to upstream addresses. To compile this module and to run it, Nginx m
 with the `--with-threads` option. This is not available on Windows. You can verify if `nginx` 
 was compiled with `--with-threads` via `nginx -V`.
 
+![](images/ngx_single_server.png)
+
+![](images/ngx_multi_server.png)
 # Building
 
 This module can be built in two fashions, it can be built via `nginx`'s built-in configuration
