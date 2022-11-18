@@ -11,6 +11,81 @@
 #define ngx_ziti_info(log, ...) ngx_log_error(NGX_LOG_INFO, log, 0, __VA_ARGS__)
 
 static ngx_str_t ngx_ziti_thread_pool_name = ngx_string("ngx_ziti_tp");
+static ngx_ziti_block_conf_t * ngx_ziti_new_block(ngx_conf_t *cf, ngx_str_t block_name);
+static int hostname_to_ip(char * hostname , char* ip);
+
+/*
+ * Defines nginx module context
+ */
+static ngx_core_module_t ngx_ziti_module_ctx = {
+        .name = ngx_string("ngx_ziti_module"),
+        ngx_ziti_create_main_conf, /* pre-configuration */
+        ngx_ziti_init_main_conf, /* post-configuration */
+};
+
+
+/**
+ * Defines nginx directives for the ziti block and sub components.
+ */
+static ngx_command_t ngx_ziti_commands[] = {
+
+        {ngx_string("ziti"), /* directive */
+         NGX_MAIN_CONF| NGX_DIRECT_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1, /* location context and takes
+                                            no arguments*/
+         ngx_ziti, /* configuration setup function */
+         0, /* No offset. Only one context is supported. */
+         0, /* No offset when storing the module configuration on struct. */
+         NULL},
+
+        {ngx_string("identity_file"),
+         NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
+         ngx_ziti_identity_file,
+         0,
+         0,
+         NULL},
+        { ngx_string("bind"),
+          NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1,
+          ngx_ziti_bind,
+          0,
+          0,
+          NULL
+        },
+        { ngx_string("upstream"),
+          NGX_ZITI_BIND_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
+          ngx_ziti_bind_upstream,
+          0,
+          0,
+          NULL
+        },
+        ngx_null_command /* command termination */
+};
+
+void ngx_ziti_exit_thread(ngx_cycle_t *cycle){
+    printf("thread");
+}
+void ngx_ziti_exit_process(ngx_cycle_t *cycle){
+    printf("process");
+}
+
+void ngx_ziti_exit_master(ngx_cycle_t *cycle){
+    printf("master");
+}
+
+ngx_module_t ngx_ziti_module = {
+        NGX_MODULE_V1,
+        &ngx_ziti_module_ctx, /* module context */
+        ngx_ziti_commands, /* module directives */
+        NGX_CORE_MODULE, /* module type */
+        NULL, /* init master */
+        NULL, /* init module */
+        ngx_ziti_init_process, /* init process */
+        NULL, /* init thread */
+        ngx_ziti_exit_thread, /* exit thread */
+        ngx_ziti_exit_process, /* exit process */
+        ngx_ziti_exit_master, /* exit master */
+        NGX_MODULE_V1_PADDING
+};
+
 
 static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle) {
     ngx_ziti_conf_t* ziti_conf = ngx_palloc(cycle->pool, sizeof(ngx_ziti_conf_t));
@@ -138,12 +213,21 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
         max_fd = client_ctx->client_socket;
     }
 
+    struct timeval timeout = {
+            .tv_sec = 1,
+            .tv_usec = 0,
+    };
+
     do {
         FD_ZERO(&socket_fd_reads);
         FD_SET(client_ctx->client_socket, &socket_fd_reads);
         FD_SET(upstream_socket, &socket_fd_reads);
 
-        activity = select(max_fd+1, &socket_fd_reads, NULL, NULL, NULL);
+        activity = select(max_fd+1, &socket_fd_reads, NULL, NULL, &timeout);
+
+        if(activity == 0){
+            continue;
+        }
 
         if (activity < 0 && errno != EINTR) {
             ngx_ziti_emerg(log, "select error(%d)", activity);
@@ -318,42 +402,6 @@ static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf) {
     return NGX_OK;
 }
 
-/**
- * Defines nginx directives for the ziti block and sub components.
- */
-static ngx_command_t ngx_ziti_commands[] = {
-
-        {ngx_string("ziti"), /* directive */
-         NGX_MAIN_CONF| NGX_DIRECT_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1, /* location context and takes
-                                            no arguments*/
-         ngx_ziti, /* configuration setup function */
-         0, /* No offset. Only one context is supported. */
-         0, /* No offset when storing the module configuration on struct. */
-         NULL},
-
-        {ngx_string("identity_file"),
-         NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
-         ngx_ziti_identity_file,
-         0,
-         0,
-         NULL},
-        { ngx_string("bind"),
-          NGX_ZITI_CONF | NGX_DIRECT_CONF | NGX_CONF_BLOCK | NGX_CONF_TAKE1,
-          ngx_ziti_bind,
-          0,
-          0,
-          NULL
-        },
-        { ngx_string("upstream"),
-          NGX_ZITI_BIND_CONF | NGX_DIRECT_CONF | NGX_CONF_TAKE1,
-          ngx_ziti_bind_upstream,
-          0,
-          0,
-          NULL
-        },
-        ngx_null_command /* command termination */
-};
-
 static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
     ngx_ziti_conf_t* ziti_conf = (ngx_ziti_conf_t*) ngx_get_conf(cycle->conf_ctx, ngx_ziti_module);
 
@@ -401,20 +449,7 @@ static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
     return NGX_OK;
 }
 
-ngx_module_t ngx_ziti_module = {
-        NGX_MODULE_V1,
-        &ngx_ziti_module_ctx, /* module context */
-        ngx_ziti_commands, /* module directives */
-        NGX_CORE_MODULE, /* module type */
-        NULL, /* init master */
-        NULL, /* init module */
-        ngx_ziti_init_process, /* init process */
-        NULL, /* init thread */
-        NULL, /* exit thread */
-        NULL, /* exit process */
-        NULL, /* exit master */
-        NGX_MODULE_V1_PADDING
-};
+
 
 /**
  * Configuration setup function that installs the content handler.

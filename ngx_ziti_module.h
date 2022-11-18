@@ -17,23 +17,6 @@ extern ngx_module_t ngx_ziti_module;
 #define NGX_ZITI_CONF 0x80000001
 #define NGX_ZITI_BIND_CONF 0x80000002
 
-static char *ngx_ziti(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char *ngx_ziti_identity_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char* ngx_ziti_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char* ngx_ziti_bind_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle);
-static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf);
-
-
-/*
- * Defines nginx module context
- */
-static ngx_core_module_t ngx_ziti_module_ctx = {
-        .name = ngx_string("ngx_ziti_module"),
-        ngx_ziti_create_main_conf, /* pre-configuration */
-        ngx_ziti_init_main_conf, /* post-configuration */
-};
-
 typedef struct {
     ngx_str_t name;
 
@@ -46,18 +29,12 @@ typedef struct {
 } ngx_ziti_block_conf_t;
 
 typedef struct {
-//    ngx_hash_t*  ziti_blocks; //holds block_name=>*ngx_ziti_block_conf_t
-//    ngx_hash_init_t*  ziti_blocks_init;
-//    ngx_hash_keys_arrays_t*  ziti_block_keys;
-
     //an array of blocks already parsed
     ngx_array_t* blocks;
 
     //temp storage for use during configuration parsing
     ngx_ziti_block_conf_t* cur_block;
 } ngx_ziti_conf_t;
-
-
 
 typedef struct {
     ngx_ziti_block_conf_t* block;
@@ -72,5 +49,19 @@ typedef struct {
     char client_name[128];
 } ngx_ziti_service_client_ctx_t;
 
+static char *ngx_ziti(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_ziti_identity_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char* ngx_ziti_bind(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char* ngx_ziti_bind_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
+static void* ngx_ziti_create_main_conf(ngx_cycle_t *cycle);
+static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf);
+
+static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle);
+
+ngx_int_t ngx_ziti_run_service_offload(ngx_cycle_t* cycle, ngx_ziti_service_ctx_t service_ctx);
+static void ngx_ziti_run_service(void *data, ngx_log_t *log);
+static void ngx_ziti_run_service_client(void *data, ngx_log_t *log);
+static void ngx_ziti_run_service_client_complete(ngx_event_t *ev);
 
 #endif //NGX_ZITI_MODULE_H
