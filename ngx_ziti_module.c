@@ -199,6 +199,16 @@ static void ngx_ziti_run_service_client(void *data, ngx_log_t *log){
     // connect the client_socket socket to server socket
     if (connect(upstream_socket, &upstream_addr_info, sizeof(upstream_addr_info)) != 0) {
         ngx_ziti_emerg(log, "connection with the upstream server failed");
+
+        sleep(1);
+        if(Ziti_close(client_ctx->client_socket) != 0) {
+            ngx_ziti_emerg(log, "failed to call Ziti_close on client socket");
+            return;
+        }
+
+        client_ctx->client_socket = 0;
+
+
         return;
     }
 
