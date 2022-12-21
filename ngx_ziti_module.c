@@ -71,15 +71,27 @@ void ngx_ziti_exit_master(ngx_cycle_t *cycle){
     printf("master");
 }
 
+static ngx_int_t ngx_ziti_init_master(ngx_log_t *log){
+    return NGX_OK;
+}
+
+static ngx_int_t ngx_ziti_init_module(ngx_cycle_t *cycle){
+    return NGX_OK;
+}
+
+static ngx_int_t ngx_ziti_init_thread(ngx_cycle_t *cycle){
+    return NGX_OK;
+}
+
 ngx_module_t ngx_ziti_module = {
         NGX_MODULE_V1,
         &ngx_ziti_module_ctx, /* module context */
         ngx_ziti_commands, /* module directives */
         NGX_CORE_MODULE, /* module type */
-        NULL, /* init master */
-        NULL, /* init module */
+        ngx_ziti_init_master, /* init master */
+        ngx_ziti_init_module, /* init module */
         ngx_ziti_init_process, /* init process */
-        NULL, /* init thread */
+        ngx_ziti_init_thread, /* init thread */
         ngx_ziti_exit_thread, /* exit thread */
         ngx_ziti_exit_process, /* exit process */
         ngx_ziti_exit_master, /* exit master */
@@ -405,15 +417,20 @@ static char* ngx_ziti_init_main_conf(ngx_cycle_t *cycle, void *conf) {
 
     ngx_ziti_info(cycle->log, "found %d ziti blocks", ziti_conf->blocks->nelts);
 
-    if(ziti_conf->blocks->nelts > 0){
-        Ziti_lib_init();
-    }
-
     return NGX_OK;
 }
 
 static ngx_int_t ngx_ziti_init_process(ngx_cycle_t *cycle){
+    ngx_ziti_debug(cycle->log, "enter: ngx_ziti_init_process");
+
+
     ngx_ziti_conf_t* ziti_conf = (ngx_ziti_conf_t*) ngx_get_conf(cycle->conf_ctx, ngx_ziti_module);
+
+    if(ziti_conf->blocks->nelts > 0){
+        Ziti_lib_init();
+    } else {
+        return NGX_OK;
+    }
 
     ngx_ziti_block_conf_t **blocks = ziti_conf->blocks->elts;
 
